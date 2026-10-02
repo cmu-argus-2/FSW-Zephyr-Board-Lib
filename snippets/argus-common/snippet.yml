@@ -1,0 +1,6 @@
+# Kconfig settings both flight software apps agreed to share.
+# Enable with `west build -S argus-common`, or set(SNIPPET argus-common)
+# in the app's CMakeLists.txt before find_package(Zephyr).
+name: argus-common
+append:
+  EXTRA_CONF_FILE: argus-common.conf

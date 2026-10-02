@@ -1,0 +1,11 @@
+# Registers this repo as a Zephyr module. Any app (C, or F' in C++) that has
+# this module in its west workspace, or lists it in ZEPHYR_EXTRA_MODULES, gets:
+#   boards/    the argus board (pins, buses, Kconfig defaults)
+#   dts/       devicetree bindings for parts with no in-tree binding
+#   snippets/  shared Kconfig fragments, enabled per app with SNIPPET
+name: argus-board
+build:
+  settings:
+    board_root: .
+    dts_root: .
+    snippet_root: .
