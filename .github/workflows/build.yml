@@ -1,0 +1,87 @@
+# Builds sample apps for the argus board on every PR and push to main, using
+# the Zephyr revision and modules pinned in west.yml. See
+# scripts/build-samples.sh for what each sample checks.
+#
+# This only builds; nothing is flashed. Hardware checks (e.g. samples/i2c_scan)
+# are run by hand before tagging a release.
+
+name: Build
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  ZEPHYR_SDK_INSTALL_DIR: /home/runner/zephyr-sdk
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    defaults:
+      run:
+        # The west workspace is the checkout's parent, as laid out by west.yml
+        # (self: path: FSW-Zephyr-Board-Lib).
+        working-directory: ${{ github.workspace }}
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          path: FSW-Zephyr-Board-Lib
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install host tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ninja-build device-tree-compiler
+
+      - name: Restore Zephyr and modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            zephyr
+            modules
+          key: west-${{ hashFiles('FSW-Zephyr-Board-Lib/west.yml') }}
+
+      - name: Fetch Zephyr and modules
+        run: |
+          pip install west
+          west init -l FSW-Zephyr-Board-Lib
+          west update --narrow --fetch-opt=--depth=1
+          pip install -r zephyr/scripts/requirements-base.txt
+
+      - name: Restore Zephyr SDK
+        id: sdk-cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.ZEPHYR_SDK_INSTALL_DIR }}
+          key: zephyr-sdk-${{ hashFiles('zephyr/SDK_VERSION') }}-arm
+
+      - name: Install Zephyr SDK
+        if: steps.sdk-cache.outputs.cache-hit != 'true'
+        # Version comes from zephyr/SDK_VERSION; only the Arm toolchain is needed.
+        run: west sdk install -d "${ZEPHYR_SDK_INSTALL_DIR}" -t arm-zephyr-eabi
+
+      - name: Build samples
+        run: FSW-Zephyr-Board-Lib/scripts/build-samples.sh
+
+      - name: Upload build logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs
+          path: FSW-Zephyr-Board-Lib/build/samples/*.log

@@ -127,9 +127,38 @@ so a v5 build can never silently use v4 pins.
 Both teams flash the same board from these files, so:
 
 1. Open a PR; get a review from someone on **each** team.
-2. Check that both apps still build for `argus/rp2350b/m33_0`.
+2. CI must pass, and both apps should still build for `argus/rp2350b/m33_0`.
 3. Once we tag releases, each app moves to the new tag in its own `west.yml`
    when it's ready.
+
+### CI
+
+Every PR and push to `main` runs `.github/workflows/build.yml`. It sets up a
+west workspace from this repo's `west.yml`, installs the Zephyr SDK version
+Zephyr asks for, and runs `scripts/build-samples.sh`, which builds these
+samples for `argus/rp2350b/m33_0` with compiler warnings as errors:
+
+| Sample | Checks |
+|---|---|
+| `hello_world` | Board boots, USB CDC ACM console |
+| `hello_world` + `argus-common` | The shared snippet applies |
+| `cpp/hello_world` | C++ with full libstdc++ (needed by F') |
+| `samples/i2c_scan` (this repo) | I2C0/I2C1, `zephyr,user` GPIOs |
+| `drivers/led/led_strip` | NeoPixel on PIO0, `led-strip` alias |
+| `drivers/lora/send` | SX1262 on SPI0, `lora0` alias |
+| `subsys/fs/fs_sample` | SD card on SPI1, FAT filesystem |
+| `drivers/watchdog` | Watchdog, `watchdog0` alias |
+
+CI only builds. It can't flash: GitHub's runners have no board attached. Before
+tagging a release, flash `samples/i2c_scan` on real hardware and check that the
+mainboard parts answer.
+
+To run the same check locally, from inside a west workspace that includes this
+repo:
+
+```bash
+scripts/build-samples.sh
+```
 
 Verified building against Zephyr `8397280` with Zephyr SDK 1.0.1: Zephyr's
 C `hello_world`, its C++ `cpp/hello_world` (full libstdc++, C++17), and
