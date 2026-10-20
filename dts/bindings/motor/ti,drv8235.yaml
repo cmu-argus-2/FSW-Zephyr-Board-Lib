@@ -1,0 +1,38 @@
+# Copyright (c) 2026 Carnegie Mellon University
+# SPDX-License-Identifier: Apache-2.0
+
+description: |
+  Texas Instruments DRV8235 I2C brushed-DC/H-bridge driver used by Argus to
+  drive one magnetorquer coil. The binding records only physical limits and
+  calibration values; control-law settings belong to the flight application.
+
+compatible: "ti,drv8235"
+
+include: i2c-device.yaml
+
+properties:
+  vm-supply:
+    type: phandle
+    required: true
+    description: Power rail controlled by the board's COIL_EN signal.
+
+  max-output-microvolt:
+    type: int
+    required: true
+    description: |
+      Maximum absolute voltage that software may command at the attached
+      magnetorquer coil. The driver rejects commands above this limit.
+
+  coil-resistance-milliohm:
+    type: int
+    required: true
+    description: |
+      Nominal magnetorquer coil resistance. The driver uses this value to
+      select and program the DRV8235 INV_R_SCALE and INV_R fields.
+
+  imtr-full-scale-microamp:
+    type: int
+    default: 3700000
+    description: |
+      Current represented by raw IMTR code 0xC0. The default follows the
+      DRV8235 data-sheet maximum-current definition.

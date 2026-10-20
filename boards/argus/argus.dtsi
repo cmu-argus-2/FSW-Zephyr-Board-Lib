@@ -53,6 +53,21 @@
 		regulator-boot-on;
 	};
 
+	/*
+	 * COIL_EN powers the six DRV8235 devices, so it must be on before their
+	 * Zephyr device initialization. Each H-bridge still starts disabled and
+	 * coasting. ADCS may turn this rail off after initialization and must
+	 * reconfigure the drivers after turning it back on.
+	 */
+	coil_power: coil-power {
+		compatible = "regulator-fixed";
+		regulator-name = "coil_power";
+		enable-gpios = <&gpio0_map 1 GPIO_ACTIVE_HIGH>;
+		startup-delay-us = <100000>;
+		off-on-delay-us = <100000>;
+		regulator-boot-on;
+	};
+
 	zephyr,user {
 		periph-pwr-flt-gpios = <&gpio0_map 41 GPIO_ACTIVE_HIGH>;
 
@@ -177,6 +192,34 @@ gpio0_lo: &gpio0 {
 	pinctrl-0 = <&i2c0_default>;
 	pinctrl-names = "default";
 	status = "okay";
+
+	/* Magnetorquer drivers on the -X, -Y and -Z face boards. */
+	torque_xm: drv8235@30 {
+		compatible = "ti,drv8235";
+		reg = <0x30>;
+		max-output-microvolt = <6000000>;
+		coil-resistance-milliohm = <25000>;
+		vm-supply = <&coil_power>;
+		status = "okay";
+	};
+
+	torque_ym: drv8235@31 {
+		compatible = "ti,drv8235";
+		reg = <0x31>;
+		max-output-microvolt = <6000000>;
+		coil-resistance-milliohm = <25000>;
+		vm-supply = <&coil_power>;
+		status = "okay";
+	};
+
+	torque_zm: drv8235@33 {
+		compatible = "ti,drv8235";
+		reg = <0x33>;
+		max-output-microvolt = <6000000>;
+		coil-resistance-milliohm = <25000>;
+		vm-supply = <&coil_power>;
+		status = "okay";
+	};
 };
 
 &i2c1 {
@@ -202,6 +245,34 @@ gpio0_lo: &gpio0 {
       reg = <0x36>;
       rsense-micro-ohms = <10000>;   /* check the schematic */
       status = "okay";
+	};
+
+	/* Magnetorquer drivers on the +X, +Y and +Z face boards. */
+	torque_xp: drv8235@30 {
+		compatible = "ti,drv8235";
+		reg = <0x30>;
+		max-output-microvolt = <6000000>;
+		coil-resistance-milliohm = <25000>;
+		vm-supply = <&coil_power>;
+		status = "okay";
+	};
+
+	torque_yp: drv8235@31 {
+		compatible = "ti,drv8235";
+		reg = <0x31>;
+		max-output-microvolt = <6000000>;
+		coil-resistance-milliohm = <25000>;
+		vm-supply = <&coil_power>;
+		status = "okay";
+	};
+
+	torque_zp: drv8235@33 {
+		compatible = "ti,drv8235";
+		reg = <0x33>;
+		max-output-microvolt = <6000000>;
+		coil-resistance-milliohm = <25000>;
+		vm-supply = <&coil_power>;
+		status = "okay";
 	};
 };
 

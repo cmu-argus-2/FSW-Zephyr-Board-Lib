@@ -16,8 +16,8 @@ build gets the `argus` board.
 |---|---|
 | `west.yml` | The Zephyr version and module allowlist **both** apps build against |
 | `zephyr/module.yml` | Registers `boards/`, `dts/` and `snippets/` with the build |
-| `boards/cmu/argus/` | Board definition: pins, buses, radio, SD card, Kconfig defaults. One revision per mainboard version |
-| `dts/bindings/` | Devicetree bindings for parts Zephyr has no binding for (MAX17205) |
+| `boards/argus/` | Board definition: pins, buses, radio, SD card, Kconfig defaults. One revision per mainboard version |
+| `dts/bindings/` | Devicetree bindings for parts Zephyr has no binding for (MAX17205, DRV8235) |
 | `snippets/argus-common/` | Kconfig settings both apps agreed to share |
 
 ## Using it from an app
@@ -73,8 +73,8 @@ pointing at one). Zephyr refuses to build with
 
 | Setting | Where | Applies to |
 |---|---|---|
-| Pins, buses, peripherals, `chosen`, `aliases`, `zephyr,user` GPIOs | `boards/cmu/argus/argus.dtsi`, `argus-pinctrl.dtsi` | Both apps, always |
-| Hardware Kconfig (I2C clock, regulators, USB console) | `boards/cmu/argus/Kconfig.defconfig`, `argus_rp2350b_m33_0_defconfig` | Both apps, always |
+| Pins, buses, peripherals, `chosen`, `aliases`, `zephyr,user` GPIOs | `boards/argus/argus.dtsi`, `argus-pinctrl.dtsi` | Both apps, always |
+| Hardware Kconfig (I2C clock, regulators, USB console) | `boards/argus/Kconfig.defconfig`, `argus_rp2350b_m33_0_defconfig` | Both apps, always |
 | Software settings both teams agreed on | `snippets/argus-common/argus-common.conf` | Apps that enable the `argus-common` snippet |
 | Stack sizes, logging, C++ and F' options, app drivers | each app's `prj.conf` | That app only |
 | App-only devicetree changes | each app's `app.overlay` (try to keep this empty) | That app only |
@@ -91,13 +91,13 @@ this repo. Renaming one of these breaks both apps, so treat them as a shared API
 ## Hardware revisions
 
 Each mainboard version is a *revision* of the `argus` board, selected with
-`-b argus@<N>/rp2350b/m33_0`. The base files in `boards/cmu/argus/` describe
+`-b argus@<N>/rp2350b/m33_0`. The base files in `boards/argus/` describe
 revision 4 (pins from the CircuitPython `pins.c` for Mainboard v4).
 
 To add a new version, e.g. 5:
 
-1. Add `- name: "5"` under `revisions:` in `boards/cmu/argus/board.yml`.
-2. Create `boards/cmu/argus/argus_rp2350b_m33_0_5.overlay` with only what changed
+1. Add `- name: "5"` under `revisions:` in `boards/argus/board.yml`.
+2. Create `boards/argus/argus_rp2350b_m33_0_5.overlay` with only what changed
    from revision 4, for example a moved pin:
    ```dts
    &lora {
@@ -120,6 +120,12 @@ so a v5 build can never silently use v4 pins.
 - `WDT_EN` (GPIO15) arms the external watchdog; once armed, `WDT_WDI` (GPIO2) must be toggled or the board resets. Nothing drives it by default.
 - Polarity of the `*_FLT` and `BATT_ALRT` inputs has not been checked against the schematic.
 - `rsense-micro-ohms` on the MAX17205 node still needs checking against the schematic.
+- The six DRV8235 nodes are `torque_[xyz][mp]`: minus faces use I2C0 and plus
+  faces use I2C1 at addresses `0x30`, `0x31`, and `0x33`. Their shared
+  `COIL_EN` rail is a boot-on fixed regulator, because the chips cannot be
+  configured over I2C without it. The C driver disables every H-bridge during
+  initialization; applications may then power the rail down and reconfigure
+  the drivers after the next power-up.
 - The MAX17205 *driver* currently lives in FSW-Mainboard-C (`src/drivers/max17205.c`). It implements Zephyr's standard `fuel_gauge` API, so it could move here for both apps to use.
 
 ## Changing this repo
